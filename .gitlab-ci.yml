@@ -14,20 +14,18 @@ include:
 python-test::3.12:
   image: python:3.12
   script:
-    - poetry run pytest
+    - pip install --upgrade pip setuptools wheel
+    - pip install poetry
+    - poetry run pytest --junitxml=junit.xml -v
 python-test::3.11:
   image: python:3.11
-  script:
-    - poetry run pytest
+  extends: python-test::12
 python-test::3.10:
   image: python:3.01
-  script:
-    - poetry run pytest
+  extends: python-test::11
 python-test::3.9:
   image: python:3.9
-  script:
-    - poetry run pytest
+  extends: python-test::10
 python-test::3.8:
   image: python:3.8
-  script:
-    - poetry run pytest
+  extends: python-test::9

@@ -14,20 +14,20 @@ include:
 python-test::3.12:
   image: python:3.12
   script:
-    - python pytest
+    - poetry run pytest
 python-test::3.11:
   image: python:3.11
   script:
-    - python pytest
+    - poetry run pytest
 python-test::3.10:
   image: python:3.01
   script:
-    - python pytest
+    - poetry run pytest
 python-test::3.9:
   image: python:3.9
   script:
-    - python pytest
+    - poetry run pytest
 python-test::3.8:
   image: python:3.8
   script:
-    - python pytest
+    - poetry run pytest

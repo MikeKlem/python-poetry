@@ -18,6 +18,9 @@ python-test::3.12:
     - pip install poetry
     - poetry install 
     - poetry run pytest --junitxml=junit.xml -v
+  artifacts:
+    reports:
+      junit: junit.xml
 python-test::3.11:
   image: python:3.11
   extends: python-test::3.12

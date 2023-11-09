@@ -21,7 +21,7 @@ python-test::3.11:
   image: python:3.11
   extends: python-test::3.12
 python-test::3.10:
-  image: python:3.01
+  image: python:3.10
   extends: python-test::3.11
 python-test::3.9:
   image: python:3.9

@@ -19,13 +19,13 @@ python-test::3.12:
     - poetry run pytest --junitxml=junit.xml -v
 python-test::3.11:
   image: python:3.11
-  extends: python-test::12
+  extends: python-test::3.12
 python-test::3.10:
   image: python:3.01
-  extends: python-test::11
+  extends: python-test::3.11
 python-test::3.9:
   image: python:3.9
-  extends: python-test::10
+  extends: python-test::3.10
 python-test::3.8:
   image: python:3.8
-  extends: python-test::9
+  extends: python-test::3.9

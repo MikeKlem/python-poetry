@@ -16,6 +16,7 @@ python-test::3.12:
   script:
     - pip install --upgrade pip setuptools wheel
     - pip install poetry
+    - poetry install 
     - poetry run pytest --junitxml=junit.xml -v
 python-test::3.11:
   image: python:3.11

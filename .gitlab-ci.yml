@@ -11,3 +11,7 @@ sast:
   stage: test
 include:
 - template: Security/SAST.gitlab-ci.yml
+python-test:
+  image: python-slim-buster
+  script:
+    - python pytest

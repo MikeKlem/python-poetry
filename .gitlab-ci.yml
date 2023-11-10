@@ -35,7 +35,7 @@ python-test::3.8:
   extends: python-test::3.9
 python-test::3.12-alpine3.18:
   image: python:3.12-alpine3.18
-  pre_script:
+  before_script:
     - pip install cffi
   extends: python-test::3.12
 python-test::3.11-alpine3.18:

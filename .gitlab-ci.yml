@@ -33,3 +33,33 @@ python-test::3.9:
 python-test::3.8:
   image: python:3.8
   extends: python-test::3.9
+python-test::3.12-alpine3.18:
+  image: python:3.12-alpine3.18
+  extends: python-test::3.12
+python-test::3.11-alpine3.18:
+  image: python:3.11-alpine3.18
+  extends: python-test::3.12-alpine3.18
+python-test::3.10-alpine3.18:
+  image: python:3.10-alpine3.18
+  extends: python-test::3.11-alpine3.18
+python-test::3.9-alpine3.18:
+  image: python:3.9-alpine3.18
+  extends: python-test::3.10-alpine3.18
+python-test::3.8-alpine3.18:
+  image: python:3.8-alpine3.18
+  extends: python-test::3.9-alpine3.18
+python-test::3.12-alpine3.17:
+  image: python:3.12-alpine3.17
+  extends: python-test::3.12-alpine3.18
+python-test::3.11-alpine3.17:
+  image: python:3.11-alpine3.17
+  extends: python-test::3.12-alpine3.17
+python-test::3.10-alpine3.17:
+  image: python:3.10-alpine3.17
+  extends: python-test::3.11-alpine3.17
+python-test::3.9-alpine3.17:
+  image: python:3.9-alpine3.17
+  extends: python-test::3.10-alpine3.17
+python-test::3.8-alpine3.17:
+  image: python:3.8-alpine3.17
+  extends: python-test::3.9-alpine3.17

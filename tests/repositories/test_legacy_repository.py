@@ -41,6 +41,7 @@ class MockRepository(LegacyRepository):
 
     def __init__(self) -> None:
         super().__init__("legacy", url="http://legacy.foo.bar", disable_cache=True)
+        self._lazy_wheel = False
 
     def _get_page(self, name: NormalizedName) -> SimpleRepositoryPage:
         fixture = self.FIXTURES / (name + ".html")
@@ -50,7 +51,9 @@ class MockRepository(LegacyRepository):
         with fixture.open(encoding="utf-8") as f:
             return SimpleRepositoryPage(self._url + f"/{name}/", f.read())
 
-    def _download(self, url: str, dest: Path) -> None:
+    def _download(
+        self, url: str, dest: Path, *, raise_accepts_ranges: bool = False
+    ) -> None:
         filename = Link(url).filename
         filepath = self.FIXTURES.parent / "pypi.org" / "dists" / filename
 
@@ -422,12 +425,12 @@ def test_get_package_retrieves_packages_with_no_hashes() -> None:
 
     package = repo.package("jupyter", Version.parse("1.0.0"))
 
-    assert [
-        {
-            "file": "jupyter-1.0.0.tar.gz",
-            "hash": "sha256:d9dc4b3318f310e34c82951ea5d6683f67bed7def4b259fafbfe4f1beb1d8e5f",
-        }
-    ] == package.files
+    assert [{
+        "file": "jupyter-1.0.0.tar.gz",
+        "hash": (
+            "sha256:d9dc4b3318f310e34c82951ea5d6683f67bed7def4b259fafbfe4f1beb1d8e5f"
+        ),
+    }] == package.files
 
 
 @pytest.mark.parametrize(
@@ -569,15 +572,13 @@ def test_authenticator_with_implicit_repository_configuration(
         re.compile("^https?://foo.bar/(.+?)$"),
     )
 
-    config.merge(
-        {
-            "repositories": repositories,
-            "http-basic": {
-                "source": {"username": "foo", "password": "bar"},
-                "publish": {"username": "baz", "password": "qux"},
-            },
-        }
-    )
+    config.merge({
+        "repositories": repositories,
+        "http-basic": {
+            "source": {"username": "foo", "password": "bar"},
+            "publish": {"username": "baz", "password": "qux"},
+        },
+    })
 
     repo = LegacyRepository(name="source", url="https://foo.bar/simple", config=config)
     repo.get_page("/foo")

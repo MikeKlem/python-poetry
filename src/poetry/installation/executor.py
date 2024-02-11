@@ -31,6 +31,7 @@ from poetry.utils.authenticator import Authenticator
 from poetry.utils.env import EnvCommandError
 from poetry.utils.helpers import Downloader
 from poetry.utils.helpers import get_file_hash
+from poetry.utils.helpers import get_highest_priority_hash_type
 from poetry.utils.helpers import pluralize
 from poetry.utils.helpers import remove_directory
 from poetry.utils.pip import pip_install
@@ -248,18 +249,18 @@ class Executor:
                     with self._lock:
                         self._sections[id(operation)] = self._io.section()
                         self._sections[id(operation)].write_line(
-                            f"  <fg=blue;options=bold>•</> {op_message}:"
+                            f"  <fg=blue;options=bold>-</> {op_message}:"
                             " <fg=blue>Pending...</>"
                         )
             else:
                 if self._should_write_operation(operation):
                     if not operation.skipped:
                         self._io.write_line(
-                            f"  <fg=blue;options=bold>•</> {op_message}"
+                            f"  <fg=blue;options=bold>-</> {op_message}"
                         )
                     else:
                         self._io.write_line(
-                            f"  <fg=default;options=bold,dark>•</> {op_message}: "
+                            f"  <fg=default;options=bold,dark>-</> {op_message}: "
                             "<fg=default;options=bold,dark>Skipped</> "
                             "<fg=default;options=dark>for the following reason:</> "
                             f"<fg=default;options=bold,dark>{operation.skip_reason}</>"
@@ -287,7 +288,7 @@ class Executor:
                     io = self._io
                 else:
                     message = (
-                        "  <error>•</error>"
+                        "  <error>-</error>"
                         f" {self.get_operation_message(operation, error=True)}:"
                         " <error>Failed</error>"
                     )
@@ -343,7 +344,7 @@ class Executor:
         except KeyboardInterrupt:
             try:
                 message = (
-                    "  <warning>•</warning>"
+                    "  <warning>-</warning>"
                     f" {self.get_operation_message(operation, warning=True)}:"
                     " <warning>Cancelled</warning>"
                 )
@@ -363,7 +364,7 @@ class Executor:
             if self.supports_fancy_output():
                 self._write(
                     operation,
-                    f"  <fg=default;options=bold,dark>•</> {operation_message}: "
+                    f"  <fg=default;options=bold,dark>-</> {operation_message}: "
                     "<fg=default;options=bold,dark>Skipped</> "
                     "<fg=default;options=dark>for the following reason:</> "
                     f"<fg=default;options=bold,dark>{operation.skip_reason}</>",
@@ -382,7 +383,7 @@ class Executor:
             return result
 
         operation_message = self.get_operation_message(operation, done=True)
-        message = f"  <fg=green;options=bold>•</> {operation_message}"
+        message = f"  <fg=green;options=bold>-</> {operation_message}"
         self._write(operation, message)
 
         self._increment_operations_count(operation, True)
@@ -516,7 +517,7 @@ class Executor:
 
     def _execute_uninstall(self, operation: Uninstall) -> int:
         op_msg = self.get_operation_message(operation)
-        message = f"  <fg=blue;options=bold>•</> {op_msg}: <info>Removing...</info>"
+        message = f"  <fg=blue;options=bold>-</> {op_msg}: <info>Removing...</info>"
         self._write(operation, message)
 
         return self._remove(operation.package)
@@ -543,7 +544,7 @@ class Executor:
 
         operation_message = self.get_operation_message(operation)
         message = (
-            f"  <fg=blue;options=bold>•</> {operation_message}:"
+            f"  <fg=blue;options=bold>-</> {operation_message}:"
             " <info>Installing...</info>"
         )
         self._write(operation, message)
@@ -591,7 +592,7 @@ class Executor:
         operation_message = self.get_operation_message(operation)
 
         message = (
-            f"  <fg=blue;options=bold>•</> {operation_message}:"
+            f"  <fg=blue;options=bold>-</> {operation_message}:"
             " <info>Preparing...</info>"
         )
         self._write(operation, message)
@@ -630,7 +631,7 @@ class Executor:
         operation_message = self.get_operation_message(operation)
 
         message = (
-            f"  <fg=blue;options=bold>•</> {operation_message}: <info>Cloning...</info>"
+            f"  <fg=blue;options=bold>-</> {operation_message}: <info>Cloning...</info>"
         )
         self._write(operation, message)
 
@@ -673,7 +674,7 @@ class Executor:
         operation_message = self.get_operation_message(operation)
 
         message = (
-            f"  <fg=blue;options=bold>•</> {operation_message}:"
+            f"  <fg=blue;options=bold>-</> {operation_message}:"
             " <info>Building...</info>"
         )
         self._write(operation, message)
@@ -695,15 +696,6 @@ class Executor:
                 package_poetry = Factory().create_poetry(pyproject.file.path.parent)
 
         if package_poetry is not None:
-            # Even if there is a build system specified
-            # some versions of pip (< 19.0.0) don't understand it
-            # so we need to check the version of pip to know
-            # if we can rely on the build system
-            legacy_pip = (
-                self._env.pip_version
-                < self._env.pip_version.__class__.from_parts(19, 0, 0)
-            )
-
             builder: Builder
             if package.develop and not package_poetry.package.build_script:
                 from poetry.masonry.builders.editable import EditableBuilder
@@ -715,13 +707,10 @@ class Executor:
                 builder.build()
 
                 return 0
-            elif legacy_pip or package_poetry.package.build_script:
+
+            if package_poetry.package.build_script:
                 from poetry.core.masonry.builders.sdist import SdistBuilder
 
-                # We need to rely on creating a temporary setup.py
-                # file since the version of pip does not support
-                # build-systems
-                # We also need it for non-PEP-517 packages
                 builder = SdistBuilder(package_poetry)
                 with builder.setup_py():
                     return self.pip_install(req, upgrade=True, editable=package.develop)
@@ -773,7 +762,7 @@ class Executor:
 
         if archive.suffix != ".whl":
             message = (
-                f"  <fg=blue;options=bold>•</> {self.get_operation_message(operation)}:"
+                f"  <fg=blue;options=bold>-</> {self.get_operation_message(operation)}:"
                 " <info>Preparing...</info>"
             )
             self._write(operation, message)
@@ -792,8 +781,17 @@ class Executor:
 
     @staticmethod
     def _validate_archive_hash(archive: Path, package: Package) -> str:
-        archive_hash: str = "sha256:" + get_file_hash(archive)
         known_hashes = {f["hash"] for f in package.files if f["file"] == archive.name}
+        hash_types = {t.split(":")[0] for t in known_hashes}
+        hash_type = get_highest_priority_hash_type(hash_types, archive.name)
+
+        if hash_type is None:
+            raise RuntimeError(
+                f"No usable hash type(s) for {package} from archive"
+                f" {archive.name} found (known hashes: {known_hashes!s})"
+            )
+
+        archive_hash = f"{hash_type}:{get_file_hash(archive, hash_type)}"
 
         if archive_hash not in known_hashes:
             raise RuntimeError(
@@ -814,7 +812,7 @@ class Executor:
 
         operation_message = self.get_operation_message(operation)
         message = (
-            f"  <fg=blue;options=bold>•</> {operation_message}: <info>Downloading...</>"
+            f"  <fg=blue;options=bold>-</> {operation_message}: <info>Downloading...</>"
         )
         progress = None
         if self.supports_fancy_output():

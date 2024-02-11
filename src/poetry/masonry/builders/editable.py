@@ -158,8 +158,27 @@ class EditableBuilder(Builder):
 
         scripts = entry_points.get("console_scripts", [])
         for script in scripts:
-            name, script = script.split(" = ")
-            module, callable_ = script.split(":")
+            name, script_with_extras = script.split(" = ")
+            script_without_extras = script_with_extras.split("[")[0]
+            try:
+                module, callable_ = script_without_extras.split(":")
+            except ValueError as exc:
+                msg = (
+                    f"Bad script ({name}): script needs to specify a function within a"
+                    " module like: module(.submodule):function\nInstead got:"
+                    f" {script_with_extras}"
+                )
+                if "not enough values" in str(exc):
+                    msg += (
+                        "\nHint: If the script depends on module-level code, try"
+                        " wrapping it in a main() function and modifying your script"
+                        f' like:\n{name} = "{script_with_extras}:main"'
+                    )
+                elif "too many values" in str(exc):
+                    msg += '\nToo many ":" found!'
+
+                raise ValueError(msg)
+
             callable_holder = callable_.split(".", 1)[0]
 
             script_file = scripts_path.joinpath(name)
@@ -231,12 +250,10 @@ class EditableBuilder(Builder):
         # write PEP 610 metadata
         direct_url_json = dist_info.joinpath("direct_url.json")
         direct_url_json.write_text(
-            json.dumps(
-                {
-                    "dir_info": {"editable": True},
-                    "url": self._poetry.file.path.parent.absolute().as_uri(),
-                }
-            )
+            json.dumps({
+                "dir_info": {"editable": True},
+                "url": self._poetry.file.path.parent.absolute().as_uri(),
+            })
         )
         added_files.append(direct_url_json)
 

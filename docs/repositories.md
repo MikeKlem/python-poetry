@@ -226,7 +226,7 @@ You can configure a package source as a secondary source with `priority = "secon
 source configuration.
 
 ```bash
-poetry source add --priority=secondary https://foo.bar/simple/
+poetry source add --priority=secondary foo https://foo.bar/simple/
 ```
 
 There can be more than one secondary package source.
@@ -247,7 +247,7 @@ You can configure a package source as a supplemental source with `priority = "su
 source configuration.
 
 ```bash
-poetry source add --priority=supplemental https://foo.bar/simple/
+poetry source add --priority=supplemental foo https://foo.bar/simple/
 ```
 
 There can be more than one supplemental package source.
@@ -274,6 +274,15 @@ poetry source add --priority=explicit foo https://foo.bar/simple/
 ```
 
 There can be more than one explicit package source.
+
+{{% note %}}
+A real-world example where an explicit package source is useful, is for PyTorch GPU packages.
+
+```bash
+poetry source add --priority=explicit pytorch-gpu-src https://download.pytorch.org/whl/cu118
+poetry add --source pytorch-gpu-src torch torchvision torchaudio
+```
+{{% /note %}}
 
 #### Package Source Constraint
 

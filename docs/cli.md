@@ -320,6 +320,14 @@ poetry will choose a suitable one based on the available package versions.
 poetry add requests pendulum
 ```
 
+{{% note %}}
+A package is looked up, by default, only from the [Default Package Source]({{< relref "repositories/#default-package-source" >}}).
+You can modify the default source (PyPI); or add and use [Supplemental Package Sources]({{< relref "repositories/#supplemental-package-sources" >}})
+or [Explicit Package Sources]({{< relref "repositories/#explicit-package-sources" >}}).
+
+For more information, refer to the [Package Sources]({{< relref "repositories/#package-sources" >}}) documentation.
+{{% /note %}}
+
 You can also specify a constraint when adding a package:
 
 ```bash
@@ -413,6 +421,11 @@ my-package = {path = "../my/path", develop = true}
 {{% note %}}
 Before poetry 1.1 path dependencies were installed in editable mode by default. You should always set the `develop` attribute explicitly,
 to make sure the behavior is the same for all poetry versions.
+{{% /note %}}
+
+{{% note %}}
+The `develop` attribute is a Poetry-specific feature, so it is not included in the package distribution metadata.
+In other words, it is only considered when using Poetry to install the project.
 {{% /note %}}
 
 If the package(s) you want to install provide extras, you can specify them

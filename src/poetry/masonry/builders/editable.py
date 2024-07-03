@@ -61,8 +61,7 @@ class EditableBuilder(Builder):
                     "  - <warning>Falling back on using a <b>setup.py</b></warning>"
                 )
                 self._setup_build()
-                path: Path = self._path
-                return path
+                return self._path
 
             self._run_build_script(self._package.build_script)
 
@@ -79,8 +78,7 @@ class EditableBuilder(Builder):
         added_files += self._add_scripts()
         self._add_dist_info(added_files)
 
-        path = self._path
-        return path
+        return self._path
 
     def _run_build_script(self, build_script: str) -> None:
         with build_environment(poetry=self._poetry, env=self._env, io=self._io) as env:
@@ -250,10 +248,12 @@ class EditableBuilder(Builder):
         # write PEP 610 metadata
         direct_url_json = dist_info.joinpath("direct_url.json")
         direct_url_json.write_text(
-            json.dumps({
-                "dir_info": {"editable": True},
-                "url": self._poetry.file.path.parent.absolute().as_uri(),
-            })
+            json.dumps(
+                {
+                    "dir_info": {"editable": True},
+                    "url": self._poetry.file.path.parent.absolute().as_uri(),
+                }
+            )
         )
         added_files.append(direct_url_json)
 

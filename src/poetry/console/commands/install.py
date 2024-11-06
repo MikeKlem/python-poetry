@@ -1,22 +1,24 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+from typing import ClassVar
+
 from cleo.helpers import option
 
 from poetry.console.commands.installer_command import InstallerCommand
+from poetry.plugins.plugin_manager import PluginManager
+
+
+if TYPE_CHECKING:
+    from cleo.io.inputs.option import Option
 
 
 class InstallCommand(InstallerCommand):
     name = "install"
     description = "Installs the project dependencies."
 
-    options = [
+    options: ClassVar[list[Option]] = [
         *InstallerCommand._group_dependency_options(),
-        option(
-            "no-dev",
-            None,
-            "Do not install the development dependencies."
-            " (<warning>Deprecated</warning>)",
-        ),
         option(
             "sync",
             None,
@@ -41,12 +43,6 @@ class InstallCommand(InstallerCommand):
             "(implicitly enables --verbose).",
         ),
         option(
-            "remove-untracked",
-            None,
-            "Removes packages not present in the lock file."
-            " (<warning>Deprecated</warning>)",
-        ),
-        option(
             "extras",
             "E",
             "Extra sets of dependencies to install.",
@@ -54,13 +50,12 @@ class InstallCommand(InstallerCommand):
             multiple=True,
         ),
         option("all-extras", None, "Install all extra dependencies."),
+        option("all-groups", None, "Install dependencies from all groups."),
         option("only-root", None, "Exclude all dependencies."),
         option(
             "compile",
             None,
-            "Compile Python source files to bytecode."
-            " (This option has no effect if modern-installation is disabled"
-            " because the old installer always compiles.)",
+            "Compile Python source files to bytecode.",
         ),
     ]
 
@@ -82,7 +77,10 @@ If you want to use Poetry only for dependency management but not for packaging,
 you can set the "package-mode" to false in your pyproject.toml file.
 """
 
-    _loggers = ["poetry.repositories.pypi_repository", "poetry.inspection.info"]
+    _loggers: ClassVar[list[str]] = [
+        "poetry.repositories.pypi_repository",
+        "poetry.inspection.info",
+    ]
 
     @property
     def activated_groups(self) -> set[str]:
@@ -92,9 +90,11 @@ you can set the "package-mode" to false in your pyproject.toml file.
             return super().activated_groups
 
     def handle(self) -> int:
-        from poetry.core.masonry.utils.module import ModuleOrPackageNotFound
+        from poetry.core.masonry.utils.module import ModuleOrPackageNotFoundError
 
         from poetry.masonry.builders.editable import EditableBuilder
+
+        PluginManager.ensure_project_plugins(self.poetry, self.io)
 
         if self.option("extras") and self.option("all-extras"):
             self.line_error(
@@ -105,12 +105,14 @@ you can set the "package-mode" to false in your pyproject.toml file.
             return 1
 
         if self.option("only-root") and any(
-            self.option(key) for key in {"with", "without", "only"}
+            self.option(key) for key in {"with", "without", "only", "all-groups"}
         ):
             self.line_error(
                 "<error>The `<fg=yellow;options=bold>--with</>`,"
-                " `<fg=yellow;options=bold>--without</>` and"
-                " `<fg=yellow;options=bold>--only</>` options cannot be used with"
+                " `<fg=yellow;options=bold>--without</>`,"
+                " `<fg=yellow;options=bold>--only</>` and"
+                " `<fg=yellow;options=bold>--all-groups</>`"
+                " options cannot be used with"
                 " the `<fg=yellow;options=bold>--only-root</>`"
                 " option.</error>"
             )
@@ -120,6 +122,17 @@ you can set the "package-mode" to false in your pyproject.toml file.
             self.line_error(
                 "<error>You cannot specify `<fg=yellow;options=bold>--no-root</>`"
                 " when using `<fg=yellow;options=bold>--only-root</>`.</error>"
+            )
+            return 1
+
+        if (
+            self.option("only") or self.option("with") or self.option("without")
+        ) and self.option("all-groups"):
+            self.line_error(
+                "<error>You cannot specify `<fg=yellow;options=bold>--with</>`,"
+                " `<fg=yellow;options=bold>--without</>`, or"
+                " `<fg=yellow;options=bold>--only</>` when using"
+                " `<fg=yellow;options=bold>--all-groups</>`.</error>"
             )
             return 1
 
@@ -134,14 +147,6 @@ you can set the "package-mode" to false in your pyproject.toml file.
         self.installer.extras(extras)
 
         with_synchronization = self.option("sync")
-        if self.option("remove-untracked"):
-            self.line_error(
-                "<warning>The `<fg=yellow;options=bold>--remove-untracked</>` option is"
-                " deprecated, use the `<fg=yellow;options=bold>--sync</>` option"
-                " instead.</warning>"
-            )
-
-            with_synchronization = True
 
         self.installer.only_groups(self.activated_groups)
         self.installer.skip_directory(self.option("no-directory"))
@@ -181,7 +186,7 @@ you can set the "package-mode" to false in your pyproject.toml file.
         try:
             builder = EditableBuilder(self.poetry, self.env, self.io)
             builder.build()
-        except (ModuleOrPackageNotFound, FileNotFoundError) as e:
+        except (ModuleOrPackageNotFoundError, FileNotFoundError) as e:
             # This is likely due to the fact that the project is an application
             # not following the structure expected by Poetry.
             # No need for an editable install in this case.
@@ -191,12 +196,13 @@ you can set the "package-mode" to false in your pyproject.toml file.
                 "If you do not want to install the current project"
                 " use <c1>--no-root</c1>.\n"
                 "If you want to use Poetry only for dependency management"
-                " but not for packaging, you can set the operating mode to "
-                '"non-package" in your pyproject.toml file.\n'
-                "In a future version of Poetry this warning will become an error!",
-                style="warning",
+                " but not for packaging, you can disable package mode by setting"
+                " <c1>package-mode = false</> in your pyproject.toml file.\n"
+                "If you did intend to install the current project, you may need"
+                " to set `packages` in your pyproject.toml file.\n",
+                style="error",
             )
-            return 0
+            return 1
 
         if overwrite:
             self.overwrite(log_install.format(tag="success"))

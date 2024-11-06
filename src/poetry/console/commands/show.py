@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from typing import ClassVar
 
 from cleo.helpers import argument
 from cleo.helpers import option
@@ -11,6 +12,8 @@ from poetry.console.commands.group_command import GroupCommand
 
 
 if TYPE_CHECKING:
+    from cleo.io.inputs.argument import Argument
+    from cleo.io.inputs.option import Option
     from cleo.io.io import IO
     from cleo.ui.table import Rows
     from packaging.utils import NormalizedName
@@ -36,14 +39,11 @@ class ShowCommand(GroupCommand, EnvCommand):
     name = "show"
     description = "Shows information about packages."
 
-    arguments = [argument("package", "The package to inspect", optional=True)]
-    options = [
+    arguments: ClassVar[list[Argument]] = [
+        argument("package", "The package to inspect", optional=True)
+    ]
+    options: ClassVar[list[Option]] = [
         *GroupCommand._group_dependency_options(),
-        option(
-            "no-dev",
-            None,
-            "Do not list the development dependencies. (<warning>Deprecated</warning>)",
-        ),
         option("tree", "t", "List the dependencies as a tree."),
         option(
             "why",
@@ -69,7 +69,7 @@ class ShowCommand(GroupCommand, EnvCommand):
     help = """The show command displays detailed information about a package, or
 lists all packages available."""
 
-    colors = ["cyan", "yellow", "green", "magenta", "blue"]
+    colors: ClassVar[list[str]] = ["cyan", "yellow", "green", "magenta", "blue"]
 
     def handle(self) -> int:
         package = self.argument("package")
@@ -195,7 +195,7 @@ lists all packages available."""
             self.line("")
             self.line("<info>required by</info>")
             for parent, requires_version in required_by.items():
-                self.line(f" - <c1>{parent}</c1> <b>{requires_version}</b>")
+                self.line(f" - <c1>{parent}</c1> requires <b>{requires_version}</b>")
 
         return 0
 

@@ -7,7 +7,7 @@ from copy import deepcopy
 from hashlib import sha1
 from pathlib import Path
 from typing import TYPE_CHECKING
-from typing import Iterator
+from typing import TypedDict
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
@@ -26,9 +26,11 @@ from poetry.vcs.git.backend import GitRefSpec
 
 
 if TYPE_CHECKING:
-    from _pytest.tmpdir import TempPathFactory
+    from collections.abc import Iterator
+
     from dulwich.client import FetchPackResult
     from dulwich.client import GitClient
+    from pytest import TempPathFactory
     from pytest_mock import MockerFixture
 
     from tests.conftest import Config
@@ -37,6 +39,15 @@ if TYPE_CHECKING:
 # these tests are integration as they rely on an external repository
 # see `source_url` fixture
 pytestmark = pytest.mark.integration
+
+
+class GitCloneKwargs(TypedDict):
+    name: str | None
+    branch: str | None
+    tag: str | None
+    revision: str | None
+    source_root: Path | None
+    clean: bool
 
 
 @pytest.fixture(autouse=True)
@@ -68,7 +79,7 @@ REF_TO_REVISION_MAP = {
 
 @pytest.fixture
 def use_system_git_client(config: Config) -> None:
-    config.merge({"experimental": {"system-git-client": True}})
+    config.merge({"system-git-client": True})
 
 
 @pytest.fixture(scope="module")
@@ -119,7 +130,7 @@ def remote_default_branch(remote_default_ref: bytes) -> str:
 
 # Regression test for https://github.com/python-poetry/poetry/issues/6722
 def test_use_system_git_client_from_environment_variables() -> None:
-    os.environ["POETRY_EXPERIMENTAL_SYSTEM_GIT_CLIENT"] = "true"
+    os.environ["POETRY_SYSTEM_GIT_CLIENT"] = "true"
 
     assert Git.is_using_legacy_client()
 
@@ -133,7 +144,11 @@ def test_git_local_info(
         assert info.revision == remote_refs.refs[remote_default_ref].decode("utf-8")
 
 
+@pytest.mark.parametrize(
+    "specification", [{}, {"revision": "HEAD"}, {"branch": "HEAD"}]
+)
 def test_git_clone_default_branch_head(
+    specification: GitCloneKwargs,
     source_url: str,
     remote_refs: FetchPackResult,
     remote_default_ref: bytes,
@@ -142,7 +157,7 @@ def test_git_clone_default_branch_head(
     spy = mocker.spy(Git, "_clone")
     spy_legacy = mocker.spy(Git, "_clone_legacy")
 
-    with Git.clone(url=source_url) as repo:
+    with Git.clone(url=source_url, **specification) as repo:
         assert remote_refs.refs[remote_default_ref] == repo.head()
 
     spy_legacy.assert_not_called()

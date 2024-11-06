@@ -28,8 +28,8 @@ to activate one explicitly, see [Switching environments](#switching-between-envi
 
 {{% note %}}
 If you use a tool like [pyenv](https://github.com/pyenv/pyenv) to manage different Python versions,
-you can set the experimental `virtualenvs.prefer-active-python` option to `true`. Poetry
-will then try to find the current `python` of your shell.
+you can switch the current `python` of your shell and Poetry will use it to create
+the new environment.
 
 For instance, if your project requires a newer Python than is available with
 your system, a standard workflow would be:
@@ -75,6 +75,44 @@ special `system` Python version to retrieve the default behavior:
 ```bash
 poetry env use system
 ```
+
+## Activating the environment
+
+{{% note %}}
+Looking for `poetry shell`? It was moved to a plugin: [`poetry-plugin-shell`](https://github.com/python-poetry/poetry-plugin-shell)
+{{% /note %}}
+
+The `poetry env activate` command prints the activate command of the virtual environment to the console.
+You can run the output command manually or feed it to the eval command of your shell to activate the environment.
+This way you won't leave the current shell.
+
+{{< tabs tabTotal="3" tabID1="bash-csh-zsh" tabID2="fish" tabID3="powershell" tabName1="Bash/Zsh/Csh" tabName2="Fish" tabName3="Powershell" >}}
+
+{{< tab tabID="bash-csh-zsh" >}}
+
+```bash
+$ eval $(poetry env activate)
+(test-project-for-test) $  # Virtualenv entered
+```
+
+{{< /tab >}}
+{{< tab tabID="fish" >}}
+
+```bash
+$ eval (poetry env activate)
+(test-project-for-test) $  # Virtualenv entered
+```
+
+{{< /tab >}}
+{{< tab tabID="powershell" >}}
+
+```ps1
+PS1> Invoke-Expression (poetry env activate)
+(test-project-for-test) PS1>  # Virtualenv entered
+```
+
+{{< /tab >}}
+{{< /tabs >}}
 
 ## Displaying the environment information
 
@@ -160,3 +198,12 @@ poetry env remove --all
 ```
 
 If you remove the currently activated virtual environment, it will be automatically deactivated.
+
+{{% note %}}
+If you use the [`virtualenvs.in-project`]({{< relref "configuration#virtualenvsin-project" >}}) configuration, you
+can simply use the command as shown below.
+
+```bash
+poetry env remove
+```
+{{% /note %}}

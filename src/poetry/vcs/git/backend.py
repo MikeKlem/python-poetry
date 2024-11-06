@@ -134,7 +134,9 @@ class GitRefSpec:
 
     @property
     def is_ref(self) -> bool:
-        return self.branch is not None and self.branch.startswith("refs/")
+        return self.branch is not None and (
+            self.branch.startswith("refs/") or self.branch == "HEAD"
+        )
 
     @property
     def is_sha_short(self) -> bool:
@@ -182,7 +184,7 @@ class Git:
 
     @staticmethod
     def get_name_from_source_url(url: str) -> str:
-        return re.sub(r"(.git)?$", "", url.rsplit("/", 1)[-1])
+        return re.sub(r"(.git)?$", "", url.rstrip("/").rsplit("/", 1)[-1])
 
     @classmethod
     def _fetch_remote_refs(cls, url: str, local: Repo) -> FetchPackResult:
@@ -395,9 +397,7 @@ class Git:
     def is_using_legacy_client() -> bool:
         from poetry.config.config import Config
 
-        legacy_client: bool = Config.create().get(
-            "experimental.system-git-client", False
-        )
+        legacy_client: bool = Config.create().get("system-git-client", False)
         return legacy_client
 
     @staticmethod

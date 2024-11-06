@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from deepdiff import DeepDiff
-from poetry.core.pyproject.exceptions import PyProjectException
+from poetry.core.pyproject.exceptions import PyProjectError
 
 from poetry.config.config_source import ConfigSource
 from poetry.console.commands.install import InstallCommand
@@ -39,7 +39,7 @@ def test_show_config_with_local_config_file_empty(
 ) -> None:
     mocker.patch(
         "poetry.factory.Factory.create_poetry",
-        side_effect=PyProjectException("[tool.poetry] section not found"),
+        side_effect=PyProjectError("[tool.poetry] section not found"),
     )
     tester.execute()
 
@@ -54,23 +54,22 @@ def test_list_displays_default_value_if_not_set(
     cache_dir = json.dumps(str(config_cache_dir))
     venv_path = json.dumps(os.path.join("{cache-dir}", "virtualenvs"))
     expected = f"""cache-dir = {cache_dir}
-experimental.system-git-client = false
 installer.max-workers = null
-installer.modern-installation = true
 installer.no-binary = null
+installer.only-binary = null
 installer.parallel = true
 keyring.enabled = true
+requests.max-retries = 0
 solver.lazy-wheel = true
+system-git-client = false
 virtualenvs.create = true
 virtualenvs.in-project = null
 virtualenvs.options.always-copy = false
 virtualenvs.options.no-pip = false
-virtualenvs.options.no-setuptools = false
 virtualenvs.options.system-site-packages = false
 virtualenvs.path = {venv_path}  # {config_cache_dir / 'virtualenvs'}
-virtualenvs.prefer-active-python = false
 virtualenvs.prompt = "{{project_name}}-py{{python_version}}"
-warnings.export = true
+virtualenvs.use-poetry-python = false
 """
 
     assert tester.io.fetch_output() == expected
@@ -86,23 +85,22 @@ def test_list_displays_set_get_setting(
     cache_dir = json.dumps(str(config_cache_dir))
     venv_path = json.dumps(os.path.join("{cache-dir}", "virtualenvs"))
     expected = f"""cache-dir = {cache_dir}
-experimental.system-git-client = false
 installer.max-workers = null
-installer.modern-installation = true
 installer.no-binary = null
+installer.only-binary = null
 installer.parallel = true
 keyring.enabled = true
+requests.max-retries = 0
 solver.lazy-wheel = true
+system-git-client = false
 virtualenvs.create = false
 virtualenvs.in-project = null
 virtualenvs.options.always-copy = false
 virtualenvs.options.no-pip = false
-virtualenvs.options.no-setuptools = false
 virtualenvs.options.system-site-packages = false
 virtualenvs.path = {venv_path}  # {config_cache_dir / 'virtualenvs'}
-virtualenvs.prefer-active-python = false
 virtualenvs.prompt = "{{project_name}}-py{{python_version}}"
-warnings.export = true
+virtualenvs.use-poetry-python = false
 """
 
     assert config.set_config_source.call_count == 0  # type: ignore[attr-defined]
@@ -139,23 +137,22 @@ def test_unset_setting(
     cache_dir = json.dumps(str(config_cache_dir))
     venv_path = json.dumps(os.path.join("{cache-dir}", "virtualenvs"))
     expected = f"""cache-dir = {cache_dir}
-experimental.system-git-client = false
 installer.max-workers = null
-installer.modern-installation = true
 installer.no-binary = null
+installer.only-binary = null
 installer.parallel = true
 keyring.enabled = true
+requests.max-retries = 0
 solver.lazy-wheel = true
+system-git-client = false
 virtualenvs.create = true
 virtualenvs.in-project = null
 virtualenvs.options.always-copy = false
 virtualenvs.options.no-pip = false
-virtualenvs.options.no-setuptools = false
 virtualenvs.options.system-site-packages = false
 virtualenvs.path = {venv_path}  # {config_cache_dir / 'virtualenvs'}
-virtualenvs.prefer-active-python = false
 virtualenvs.prompt = "{{project_name}}-py{{python_version}}"
-warnings.export = true
+virtualenvs.use-poetry-python = false
 """
     assert config.set_config_source.call_count == 0  # type: ignore[attr-defined]
     assert tester.io.fetch_output() == expected
@@ -170,23 +167,22 @@ def test_unset_repo_setting(
     cache_dir = json.dumps(str(config_cache_dir))
     venv_path = json.dumps(os.path.join("{cache-dir}", "virtualenvs"))
     expected = f"""cache-dir = {cache_dir}
-experimental.system-git-client = false
 installer.max-workers = null
-installer.modern-installation = true
 installer.no-binary = null
+installer.only-binary = null
 installer.parallel = true
 keyring.enabled = true
+requests.max-retries = 0
 solver.lazy-wheel = true
+system-git-client = false
 virtualenvs.create = true
 virtualenvs.in-project = null
 virtualenvs.options.always-copy = false
 virtualenvs.options.no-pip = false
-virtualenvs.options.no-setuptools = false
 virtualenvs.options.system-site-packages = false
 virtualenvs.path = {venv_path}  # {config_cache_dir / 'virtualenvs'}
-virtualenvs.prefer-active-python = false
 virtualenvs.prompt = "{{project_name}}-py{{python_version}}"
-warnings.export = true
+virtualenvs.use-poetry-python = false
 """
     assert config.set_config_source.call_count == 0  # type: ignore[attr-defined]
     assert tester.io.fetch_output() == expected
@@ -299,23 +295,22 @@ def test_list_displays_set_get_local_setting(
     cache_dir = json.dumps(str(config_cache_dir))
     venv_path = json.dumps(os.path.join("{cache-dir}", "virtualenvs"))
     expected = f"""cache-dir = {cache_dir}
-experimental.system-git-client = false
 installer.max-workers = null
-installer.modern-installation = true
 installer.no-binary = null
+installer.only-binary = null
 installer.parallel = true
 keyring.enabled = true
+requests.max-retries = 0
 solver.lazy-wheel = true
+system-git-client = false
 virtualenvs.create = false
 virtualenvs.in-project = null
 virtualenvs.options.always-copy = false
 virtualenvs.options.no-pip = false
-virtualenvs.options.no-setuptools = false
 virtualenvs.options.system-site-packages = false
 virtualenvs.path = {venv_path}  # {config_cache_dir / 'virtualenvs'}
-virtualenvs.prefer-active-python = false
 virtualenvs.prompt = "{{project_name}}-py{{python_version}}"
-warnings.export = true
+virtualenvs.use-poetry-python = false
 """
 
     assert config.set_config_source.call_count == 1  # type: ignore[attr-defined]
@@ -328,7 +323,7 @@ def test_list_must_not_display_sources_from_pyproject_toml(
     command_tester_factory: CommandTesterFactory,
     config_cache_dir: Path,
 ) -> None:
-    source = fixture_dir("with_non_default_source_implicit")
+    source = fixture_dir("with_primary_source_implicit")
     pyproject_content = (source / "pyproject.toml").read_text(encoding="utf-8")
     poetry = project_factory("foo", pyproject_content=pyproject_content)
     tester = command_tester_factory("config", poetry=poetry)
@@ -338,24 +333,23 @@ def test_list_must_not_display_sources_from_pyproject_toml(
     cache_dir = json.dumps(str(config_cache_dir))
     venv_path = json.dumps(os.path.join("{cache-dir}", "virtualenvs"))
     expected = f"""cache-dir = {cache_dir}
-experimental.system-git-client = false
 installer.max-workers = null
-installer.modern-installation = true
 installer.no-binary = null
+installer.only-binary = null
 installer.parallel = true
 keyring.enabled = true
 repositories.foo.url = "https://foo.bar/simple/"
+requests.max-retries = 0
 solver.lazy-wheel = true
+system-git-client = false
 virtualenvs.create = true
 virtualenvs.in-project = null
 virtualenvs.options.always-copy = false
 virtualenvs.options.no-pip = false
-virtualenvs.options.no-setuptools = false
 virtualenvs.options.system-site-packages = false
 virtualenvs.path = {venv_path}  # {config_cache_dir / 'virtualenvs'}
-virtualenvs.prefer-active-python = false
 virtualenvs.prompt = "{{project_name}}-py{{python_version}}"
-warnings.export = true
+virtualenvs.use-poetry-python = false
 """
 
     assert tester.io.fetch_output() == expected
@@ -516,6 +510,13 @@ def test_config_installer_parallel(
 
 
 @pytest.mark.parametrize(
+    ("setting",),
+    [
+        ("installer.no-binary",),
+        ("installer.only-binary",),
+    ],
+)
+@pytest.mark.parametrize(
     ("value", "expected"),
     [
         ("true", [":all:"]),
@@ -528,11 +529,9 @@ def test_config_installer_parallel(
         ("", []),
     ],
 )
-def test_config_installer_no_binary(
-    tester: CommandTester, value: str, expected: list[str]
+def test_config_installer_binary_filter_config(
+    tester: CommandTester, setting: str, value: str, expected: list[str]
 ) -> None:
-    setting = "installer.no-binary"
-
     tester.execute(setting)
     assert tester.io.fetch_output().strip() == "null"
 

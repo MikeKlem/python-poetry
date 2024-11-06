@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -32,16 +33,14 @@ from poetry.utils.env import NullEnv
 from tests.helpers import MOCK_DEFAULT_GIT_REVISION
 from tests.helpers import get_dependency
 from tests.helpers import get_package
-from tests.repositories.test_legacy_repository import (
-    MockRepository as MockLegacyRepository,
-)
-from tests.repositories.test_pypi_repository import MockRepository
 
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
     from poetry.installation.operations.operation import Operation
+    from poetry.repositories.legacy_repository import LegacyRepository
+    from poetry.repositories.pypi_repository import PyPiRepository
     from poetry.utils.env import Env
     from tests.conftest import Config
     from tests.types import FixtureDirGetter
@@ -1090,22 +1089,22 @@ def test_run_installs_extras_with_deps_if_requested(
         expected_installations_count = 0 if is_installed else 2
         # We only want to uninstall extras if we do a "poetry install" without extras,
         # not if we do a "poetry update" or "poetry add".
-        expected_removals_count = 2 if is_installed and is_locked else 0
+        expected_removals_count = 2 if is_installed else 0
 
     assert installer.executor.installations_count == expected_installations_count
     assert installer.executor.removals_count == expected_removals_count
 
 
-@pytest.mark.network
 def test_installer_with_pypi_repository(
     package: ProjectPackage,
     locker: Locker,
     installed: CustomInstalledRepository,
     config: Config,
     env: NullEnv,
+    pypi_repository: PyPiRepository,
 ) -> None:
     pool = RepositoryPool()
-    pool.add_repository(MockRepository())
+    pool.add_repository(pypi_repository)
 
     installer = Installer(
         NullIO(), env, package, locker, pool, config, installed=installed
@@ -1117,7 +1116,6 @@ def test_installer_with_pypi_repository(
     assert result == 0
 
     expected = fixture("with-pypi-repository")
-
     assert expected == locker.written_data
 
 
@@ -1298,13 +1296,13 @@ def test_run_installs_with_local_setuptools_directory(
     locker: Locker,
     repo: Repository,
     package: ProjectPackage,
-    tmpdir: Path,
+    tmp_path: Path,
     fixture_dir: FixtureDirGetter,
 ) -> None:
-    root_dir = Path(__file__).parent.parent.parent
+    root_dir = tmp_path / "root"
     package.root_dir = root_dir
     locker.set_lock_path(root_dir)
-    file_path = fixture_dir("project_with_setup/")
+    file_path = shutil.copytree(fixture_dir("project_with_setup"), root_dir / "project")
     package.add_dependency(
         Factory.create_dependency(
             "project-with-setup",
@@ -1627,7 +1625,7 @@ def test_run_install_duplicate_dependencies_different_constraints_with_lock(
     assert installer.executor.removals_count == 0
 
 
-def test_run_update_uninstalls_after_removal_transient_dependency(
+def test_run_update_uninstalls_after_removal_transitive_dependency(
     installer: Installer,
     locker: Locker,
     repo: Repository,
@@ -1793,9 +1791,6 @@ def test_run_install_duplicate_dependencies_different_constraints_with_lock_upda
     assert installer.executor.removals_count == 0
 
 
-@pytest.mark.skip(
-    "This is not working at the moment due to limitations in the resolver"
-)
 def test_installer_test_solver_finds_compatible_package_for_dependency_python_not_fully_compatible_with_package_python(
     installer: Installer,
     locker: Locker,
@@ -1900,11 +1895,12 @@ def test_installer_required_extras_should_not_be_removed_when_updating_single_de
     env: NullEnv,
     mocker: MockerFixture,
     config: Config,
+    pypi_repository: PyPiRepository,
 ) -> None:
     mocker.patch("sys.platform", "darwin")
 
     pool = RepositoryPool()
-    pool.add_repository(MockRepository())
+    pool.add_repository(pypi_repository)
 
     installer = Installer(
         NullIO(),
@@ -1917,7 +1913,11 @@ def test_installer_required_extras_should_not_be_removed_when_updating_single_de
         executor=Executor(env, pool, config, NullIO()),
     )
 
-    package.add_dependency(Factory.create_dependency("poetry", {"version": "^0.12.0"}))
+    package.add_dependency(
+        Factory.create_dependency(
+            "with-transitive-extra-dependency", {"version": "^0.12"}
+        )
+    )
 
     installer.update(True)
     result = installer.run()
@@ -1963,9 +1963,10 @@ def test_installer_required_extras_should_be_installed(
     installed: CustomInstalledRepository,
     env: NullEnv,
     config: Config,
+    pypi_repository: PyPiRepository,
 ) -> None:
     pool = RepositoryPool()
-    pool.add_repository(MockRepository())
+    pool.add_repository(pypi_repository)
 
     installer = Installer(
         NullIO(),
@@ -1979,7 +1980,7 @@ def test_installer_required_extras_should_be_installed(
     )
     package.add_dependency(
         Factory.create_dependency(
-            "cachecontrol", {"version": "^0.12.5", "extras": ["filecache"]}
+            "with-extra-dependency", {"version": "^0.12", "extras": ["filecache"]}
         )
     )
 
@@ -2099,6 +2100,8 @@ def test_installer_can_install_dependencies_from_forced_source(
     installed: CustomInstalledRepository,
     env: NullEnv,
     config: Config,
+    legacy_repository: LegacyRepository,
+    pypi_repository: PyPiRepository,
 ) -> None:
     package.python_versions = "^3.7"
     package.add_dependency(
@@ -2106,8 +2109,8 @@ def test_installer_can_install_dependencies_from_forced_source(
     )
 
     pool = RepositoryPool()
-    pool.add_repository(MockLegacyRepository())
-    pool.add_repository(MockRepository())
+    pool.add_repository(legacy_repository)
+    pool.add_repository(pypi_repository)
 
     installer = Installer(
         NullIO(),
@@ -2131,7 +2134,7 @@ def test_installer_can_install_dependencies_from_forced_source(
 def test_run_installs_with_url_file(
     installer: Installer, locker: Locker, repo: Repository, package: ProjectPackage
 ) -> None:
-    url = "https://python-poetry.org/distributions/demo-0.1.0-py2.py3-none-any.whl"
+    url = "https://files.pythonhosted.org/distributions/demo-0.1.0-py2.py3-none-any.whl"
     package.add_dependency(Factory.create_dependency("demo", {"url": url}))
 
     repo.add_package(get_package("pendulum", "1.4.4"))
@@ -2157,9 +2160,9 @@ def test_run_installs_with_same_version_url_files(
     env_platform: str,
 ) -> None:
     urls = {
-        "linux": "https://python-poetry.org/distributions/demo-0.1.0.tar.gz",
+        "linux": "https://files.pythonhosted.org/distributions/demo-0.1.0.tar.gz",
         "win32": (
-            "https://python-poetry.org/distributions/demo-0.1.0-py2.py3-none-any.whl"
+            "https://files.pythonhosted.org/distributions/demo-0.1.0-py2.py3-none-any.whl"
         ),
     }
     for platform, url in urls.items():
@@ -2226,79 +2229,6 @@ def test_installer_uses_prereleases_if_they_are_compatible(
     assert result == 0
 
     assert installer.executor.installations_count == 2
-
-
-def test_installer_can_handle_old_lock_files(
-    locker: Locker,
-    package: ProjectPackage,
-    repo: Repository,
-    installed: CustomInstalledRepository,
-    config: Config,
-) -> None:
-    pool = RepositoryPool()
-    pool.add_repository(MockRepository())
-
-    package.add_dependency(Factory.create_dependency("pytest", "^3.5", groups=["dev"]))
-
-    locker.locked()
-    locker.mock_lock_data(fixture("old-lock"))
-
-    installer = Installer(
-        NullIO(),
-        MockEnv(),
-        package,
-        locker,
-        pool,
-        config,
-        installed=installed,
-        executor=Executor(MockEnv(), pool, config, NullIO()),
-    )
-    result = installer.run()
-    assert result == 0
-
-    assert installer.executor.installations_count == 6
-
-    installer = Installer(
-        NullIO(),
-        MockEnv(version_info=(2, 7, 18)),
-        package,
-        locker,
-        pool,
-        config,
-        installed=installed,
-        executor=Executor(
-            MockEnv(version_info=(2, 7, 18)),
-            pool,
-            config,
-            NullIO(),
-        ),
-    )
-    result = installer.run()
-    assert result == 0
-
-    # funcsigs will be added
-    assert installer.executor.installations_count == 7
-
-    installer = Installer(
-        NullIO(),
-        MockEnv(version_info=(2, 7, 18), platform="win32"),
-        package,
-        locker,
-        pool,
-        config,
-        installed=installed,
-        executor=Executor(
-            MockEnv(version_info=(2, 7, 18), platform="win32"),
-            pool,
-            config,
-            NullIO(),
-        ),
-    )
-    result = installer.run()
-    assert result == 0
-
-    # colorama will be added
-    assert installer.executor.installations_count == 8
 
 
 def test_installer_does_not_write_lock_file_when_installation_fails(
@@ -2724,7 +2654,9 @@ def test_explicit_source_dependency_with_direct_origin_dependency(
     A dependency with explicit source should not be satisfied by
     a direct origin dependency even if there is a version match.
     """
-    demo_url = "https://python-poetry.org/distributions/demo-0.1.0-py2.py3-none-any.whl"
+    demo_url = (
+        "https://files.pythonhosted.org/distributions/demo-0.1.0-py2.py3-none-any.whl"
+    )
     package.add_dependency(
         Factory.create_dependency(
             "demo",

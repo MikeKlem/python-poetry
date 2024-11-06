@@ -5,13 +5,10 @@ import time
 from collections import defaultdict
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
-from typing import FrozenSet
-from typing import Tuple
-from typing import TypeVar
 
 from poetry.mixology import resolve_version
-from poetry.mixology.failure import SolveFailure
-from poetry.puzzle.exceptions import OverrideNeeded
+from poetry.mixology.failure import SolveFailureError
+from poetry.puzzle.exceptions import OverrideNeededError
 from poetry.puzzle.exceptions import SolverProblemError
 from poetry.puzzle.provider import Indicator
 from poetry.puzzle.provider import Provider
@@ -20,12 +17,14 @@ from poetry.puzzle.provider import Provider
 if TYPE_CHECKING:
     from collections.abc import Collection
     from collections.abc import Iterator
+    from collections.abc import Sequence
 
     from cleo.io.io import IO
     from packaging.utils import NormalizedName
     from poetry.core.packages.dependency import Dependency
     from poetry.core.packages.package import Package
     from poetry.core.packages.project_package import ProjectPackage
+    from typing_extensions import Self
 
     from poetry.puzzle.transaction import Transaction
     from poetry.repositories import RepositoryPool
@@ -154,9 +153,9 @@ class Solver:
             result = resolve_version(self._package, self._provider)
 
             packages = result.packages
-        except OverrideNeeded as e:
+        except OverrideNeededError as e:
             return self._solve_in_compatibility_mode(e.overrides)
-        except SolveFailure as e:
+        except SolveFailureError as e:
             raise SolverProblemError(e)
 
         combined_nodes = depth_first_search(PackageNode(self._package, packages))
@@ -178,16 +177,14 @@ class Solver:
                             if _package.name == dep.name:
                                 continue
 
-                            try:
-                                index = _package.requires.index(dep)
-                            except ValueError:
-                                _package.add_dependency(dep)
-                            else:
-                                _dep = _package.requires[index]
-                                if _dep.marker != dep.marker:
-                                    # marker of feature package is more accurate
-                                    # because it includes relevant extras
-                                    _dep.marker = dep.marker
+                            # Avoid duplication.
+                            if any(
+                                _dep == dep and _dep.marker == dep.marker
+                                for _dep in _package.requires
+                            ):
+                                continue
+
+                            _package.add_dependency(dep)
             else:
                 final_packages.append(package)
                 depths.append(results[package])
@@ -196,9 +193,7 @@ class Solver:
         return final_packages, depths
 
 
-DFSNodeID = Tuple[str, FrozenSet[str], bool]
-
-T = TypeVar("T", bound="DFSNode")
+DFSNodeID = tuple[str, frozenset[str], bool]
 
 
 class DFSNode:
@@ -207,7 +202,7 @@ class DFSNode:
         self.name = name
         self.base_name = base_name
 
-    def reachable(self: T) -> list[T]:
+    def reachable(self) -> Sequence[Self]:
         return []
 
     def visit(self, parents: list[PackageNode]) -> None:
@@ -284,7 +279,7 @@ class PackageNode(DFSNode):
             package.name,
         )
 
-    def reachable(self) -> list[PackageNode]:
+    def reachable(self) -> Sequence[PackageNode]:
         children: list[PackageNode] = []
 
         for dependency in self.package.all_requires:

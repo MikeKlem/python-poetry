@@ -27,20 +27,20 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: python-poetry/website
 
       # use .github from pull request target instead of pull_request.head
       # for pull_request_target trigger to avoid arbitrary code execution
-      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: poetry-github
           sparse-checkout: .github
 
       # only checkout docs from pull_request.head to not use something else by accident
       # for pull_request_target trigger (security)
-      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: poetry-docs
           ref: ${{ github.event.pull_request.head.sha }}

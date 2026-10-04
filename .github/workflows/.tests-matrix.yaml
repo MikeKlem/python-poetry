@@ -31,7 +31,7 @@ jobs:
     runs-on: ${{ inputs.runner }}
     if: inputs.run-mypy
     steps:
-      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: ./.github/actions/bootstrap-poetry
         id: bootstrap-poetry
@@ -55,7 +55,7 @@ jobs:
     runs-on: ${{ inputs.runner }}
     if: inputs.run-pytest
     steps:
-      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: ./.github/actions/bootstrap-poetry
         with:
@@ -77,7 +77,7 @@ jobs:
     runs-on: ${{ inputs.runner }}
     if: inputs.run-pytest-export
     steps:
-      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: poetry
 
@@ -93,7 +93,7 @@ jobs:
         id: poetry-plugin-export-version
 
       - name: Check out poetry-plugin-export
-        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: poetry-plugin-export
           repository: python-poetry/poetry-plugin-export
